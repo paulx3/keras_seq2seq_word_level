@@ -12,26 +12,21 @@ import numpy as np
 from keras.layers import Input, Dense, Embedding, GRU
 from keras.models import Model
 from keras.preprocessing.sequence import pad_sequences
-from numpy import array
 
-from helper import padding_len, get_data_v2, get_data_v2_offset, vocab, id_vocab
+from helper import get_data_v2, get_data_v2_offset, vocab, id_vocab, manual_one_hot
 
-START_TOKEN = 0
-
-original = pad_sequences(get_data_v2("C:\\Users\\paulx\\Desktop\\keras_generative_pg\\test_source.txt"), padding="post",
-                         value=1.0, maxlen=30)
-paraphrase = pad_sequences(get_data_v2("C:\\Users\\paulx\\Desktop\\keras_generative_pg\\test_target.txt"),
-                           padding="post", value=1.0, maxlen=30)
-target_paraphrase = array(get_data_v2_offset("C:\\Users\\paulx\\Desktop\\keras_generative_pg\\test_target.txt"))
+# file reader
+original = pad_sequences(get_data_v2("train_source.txt"), padding="post", value=1.0, maxlen=30)
+paraphrase = pad_sequences(get_data_v2("train_target.txt"), padding="post", value=1.0, maxlen=30)
+target_paraphrase = manual_one_hot(
+    pad_sequences(get_data_v2_offset("train_target.txt"), padding="post", value=1.0, maxlen=30))
 
 # parameters
-latent_dim = 800
+latent_dim = 256
 num_encoder_tokens = 30
-num_decoder_tokens = 3244
-batch_size = 32
-epochs = 1
-time_steps = padding_len
-input_dim = original.shape[-1]
+num_decoder_tokens = 3193
+batch_size = 16
+epochs = 200
 
 # Define an input sequence and process it.
 # encoder_inputs = Input(shape=(time_steps, input_dim,), )
@@ -45,7 +40,7 @@ encoder_states = state_h
 # Set up the decoder, using `encoder_states` as initial state.
 # decoder_inputs = Input(shape=(time_steps, input_dim,), )
 decoder_inputs = Input(shape=(None,), name="DecoderInput_1")
-embedded_decoder_inputs = Embedding(30, latent_dim)(decoder_inputs)
+embedded_decoder_inputs = Embedding(30, num_decoder_tokens)(decoder_inputs)
 # We set up our decoder to return full output sequences,
 # and to return internal states as well. We don't use thex
 # return states in the training model, but we will use them in inference.
@@ -58,7 +53,9 @@ decoder_outputs = decoder_dense(x)
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
 model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
 
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
+# model.compile(optimizer='rmsprop', loss='categorical_crossentropy')
+model.compile(optimizer='sgd', loss='categorical_crossentropy')
+# model.compile(optimizer='adam', loss='categorical_crossentropy')
 print("begin training")
 model.fit([original, paraphrase], target_paraphrase,
           batch_size=batch_size,
@@ -83,29 +80,32 @@ def decode_sequence(input_seq):
 
     # Generate empty target sequence of length 1.
     target_seq = np.zeros((1, 30))
+    current_step = 0
     # Populate the first character of target sequence with the start character.
-    target_seq[0, 0] = vocab["<S>"]
+    target_seq[0, current_step] = vocab["<S>"]
 
     # Sampling loop for a batch of sequences
     # (to simplify, here we assume a batch of size 1).
     stop_condition = False
     decoded_sentence = ''
+
     while not stop_condition:
         output_tokens, h = decoder_model.predict([target_seq] + [states_value])
-
+        current_step += 1
         # Sample a token
-        sampled_token_index = np.argmax(output_tokens[0, -1, :])
+        sampled_token_index = np.argmax(output_tokens[0, current_step, :])
         sampled_char = id_vocab[sampled_token_index]
-        decoded_sentence += sampled_char
+        decoded_sentence += sampled_char + " "
 
         # Exit condition: either hit max length
         # or find stop character.
-        if sampled_char == '</S>' or len(decoded_sentence) > time_steps:
+        # sampled_char == '</S>' or
+        if len(decoded_sentence) > 30:
             stop_condition = True
 
         # Update the target sequence (of length 1).
-        target_seq = np.zeros((1, 30))
-        target_seq[0, 0] = sampled_token_index
+        # target_seq = np.zeros((1, 30))
+        target_seq[0, current_step] = sampled_token_index
 
         # Update states
         states_value = h

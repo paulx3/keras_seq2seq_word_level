@@ -20,7 +20,9 @@ But word level implementation is common.
 
 
 # QuickStart
-Use `python basic_seq2seq.py`.
+```
+python basic_seq2seq.py
+```
 
 # Resource
 * `test_source.txt` original sentence

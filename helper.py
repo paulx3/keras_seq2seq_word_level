@@ -9,12 +9,13 @@
 '''
 
 import numpy as np
-from keras.preprocessing.sequence import pad_sequences
 from keras.utils.np_utils import to_categorical
 from numpy import array
 
+num_decoder_tokens = 3193
+
 np.set_printoptions(threshold=np.nan)
-padding_len = 20
+padding_len = 29
 
 UNK_TOKEN = 2
 END_TOKEN = 1
@@ -34,7 +35,7 @@ id_vocab = {value: key for key, value in vocab.items()}
 
 
 def tokenize_and_map(line):
-    return [0] + [vocab.get(token, UNK_TOKEN) for token in line.split(' ')]
+    return [START_TOKEN] + [vocab.get(token, UNK_TOKEN) for token in line.split(' ')]
 
 
 def get_data_v2(file_name):
@@ -52,7 +53,12 @@ def get_data_v2_offset(file_name):
         for in_line in fp:
             tmp = tokenize_and_map(in_line)[:(padding_len - 1)] + [END_TOKEN]
             tmp = tmp[1:]
-            tmp = to_categorical(array(tmp), num_classes=3244)
-            tmp = pad_sequences(tmp, padding="post", value=1.0, maxlen=3244)
             res.append(tmp)
-    return pad_sequences(res, padding="post", maxlen=30)
+    return res
+
+
+def manual_one_hot(lines):
+    res = []
+    for line in lines:
+        res.append(to_categorical(line, num_classes=num_decoder_tokens))
+    return array(res)
