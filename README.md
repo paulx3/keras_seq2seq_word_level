@@ -1,6 +1,6 @@
-# Keras seq2seq word-level model implementation
+# Keras seq2seq word-level model implementation by wanzeyu
 # Overview
-Keras implementation for seq2seq by wanzeyu
+Keras implementation for seq2seq
 
 In this project I try to implement seq2seq word level model using keras.
 
