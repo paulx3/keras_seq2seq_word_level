@@ -8,11 +8,10 @@
 @time: 2017/12/4 2:19
 '''
 
+import nltk
 import numpy as np
 from keras.utils.np_utils import to_categorical
 from numpy import array
-
-num_decoder_tokens = 3193
 
 np.set_printoptions(threshold=np.nan)
 padding_len = 29
@@ -20,6 +19,43 @@ padding_len = 29
 UNK_TOKEN = 2
 END_TOKEN = 1
 START_TOKEN = 0
+
+# line read limit in case of "Memory Error"
+limit = 10000
+
+
+def get_vocab():
+    print("generate vocab")
+    words = []
+    count_1 = 0
+    count_2 = 0
+    with open("train_source.txt", "r", encoding="utf8") as fp:
+        for line in fp:
+            if count_1 == limit:
+                break
+            count_1 += 1
+            res = line.strip().split(" ")
+            for i in res:
+                words.append(i)
+    with open("train_target.txt", "r", encoding="utf8") as fp:
+        for line in fp:
+            if count_2 == limit:
+                break
+            count_2 += 1
+            res = line.strip().split(" ")
+            for i in res:
+                words.append(i)
+    freq = nltk.FreqDist(words)
+    with open("train_vocab.txt", "w", encoding="utf8") as fp:
+        fp.write("<S>")
+        fp.write("\n")
+        fp.write("</S>")
+        fp.write("\n")
+        fp.write("<UNK>")
+        fp.write("\n")
+        for word in freq.most_common():
+            fp.write(word[0])
+            fp.write("\n")
 
 
 def load_vocab(filename):
@@ -30,8 +66,11 @@ def load_vocab(filename):
     return vocab
 
 
+# generate vocab
+get_vocab()
 vocab = load_vocab("train_vocab.txt")
 id_vocab = {value: key for key, value in vocab.items()}
+num_decoder_tokens = len(vocab)
 
 
 def tokenize_and_map(line):
@@ -40,8 +79,12 @@ def tokenize_and_map(line):
 
 def get_data_v2(file_name):
     res = []
+    count = 0
     with open(file_name) as fp:
         for in_line in fp:
+            if count == limit:
+                break
+            count += 1
             tmp = tokenize_and_map(in_line)[:(padding_len - 1)] + [END_TOKEN]
             res.append(tmp)
     return res
@@ -49,8 +92,12 @@ def get_data_v2(file_name):
 
 def get_data_v2_offset(file_name):
     res = []
+    count = 0
     with open(file_name) as fp:
         for in_line in fp:
+            if count == limit:
+                break
+            count += 1
             tmp = tokenize_and_map(in_line)[:(padding_len - 1)] + [END_TOKEN]
             tmp = tmp[1:]
             res.append(tmp)

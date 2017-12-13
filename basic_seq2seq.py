@@ -9,6 +9,7 @@
 '''
 
 import numpy as np
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from keras.layers import Input, Dense, Embedding, GRU
 from keras.models import Model
 from keras.preprocessing.sequence import pad_sequences
@@ -24,8 +25,8 @@ target_paraphrase = manual_one_hot(
 # parameters
 latent_dim = 256
 num_encoder_tokens = 30
-num_decoder_tokens = 3193
-batch_size = 16
+num_decoder_tokens = len(vocab)
+batch_size = 32
 epochs = 200
 
 # Define an input sequence and process it.
@@ -60,7 +61,11 @@ print("begin training")
 model.fit([original, paraphrase], target_paraphrase,
           batch_size=batch_size,
           epochs=epochs,
-          validation_split=0.2)
+          validation_split=0.2,
+          callbacks=[TensorBoard(log_dir="./logs"),
+                     ModelCheckpoint(filepath="model.h5", verbose=1, save_weights_only=True, save_best_only=True),
+                     EarlyStopping(monitor="val_loss")]
+          )
 
 encoder_model = Model(encoder_inputs, encoder_states)
 
@@ -99,8 +104,7 @@ def decode_sequence(input_seq):
 
         # Exit condition: either hit max length
         # or find stop character.
-        # sampled_char == '</S>' or
-        if len(decoded_sentence) > 30:
+        if sampled_char == '</S>' or len(decoded_sentence) > 30:
             stop_condition = True
 
         # Update the target sequence (of length 1).
