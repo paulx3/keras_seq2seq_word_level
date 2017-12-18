@@ -17,11 +17,10 @@ np.set_printoptions(threshold=np.nan)
 padding_len = 29
 
 UNK_TOKEN = 2
-END_TOKEN = 1
-START_TOKEN = 0
+END_TOKEN = 0
 
 # line read limit in case of "Memory Error"
-limit = 10000
+limit = 5
 
 
 def get_vocab():
@@ -47,9 +46,9 @@ def get_vocab():
                 words.append(i)
     freq = nltk.FreqDist(words)
     with open("train_vocab.txt", "w", encoding="utf8") as fp:
-        fp.write("<S>")
-        fp.write("\n")
         fp.write("</S>")
+        fp.write("\n")
+        fp.write("<S>")
         fp.write("\n")
         fp.write("<UNK>")
         fp.write("\n")
@@ -74,7 +73,7 @@ num_decoder_tokens = len(vocab)
 
 
 def tokenize_and_map(line):
-    return [START_TOKEN] + [vocab.get(token, UNK_TOKEN) for token in line.split(' ')]
+    return [vocab["<S>"]] + [vocab.get(token, UNK_TOKEN) for token in line.split(' ')]
 
 
 def get_data_v2(file_name):
